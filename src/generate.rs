@@ -1,0 +1,76 @@
+use std::fs;
+use std::path::Path;
+
+use serde_json::json;
+
+use crate::doctor::analyze;
+use crate::error::AppError;
+use crate::policy::{load_policy, write_default_policy};
+use crate::report::render_markdown_report;
+
+pub fn run_generate(policy_path: &Path, profile: Option<&str>) -> Result<(), AppError> {
+    write_default_policy(policy_path, profile)?;
+    let policy = load_policy(policy_path)?;
+
+    create_parented_file(
+        Path::new(".agentsec/hooks/README.md"),
+        "# AgentSec hooks\n\nThis directory contains generated hook helpers.\n",
+        false,
+    )?;
+    create_parented_file(
+        Path::new(".agentsec/hooks/agentsec-policy.sh"),
+        "#!/usr/bin/env sh\n# Minimal placeholder hook decision script.\necho '{\"decision\":\"allow\",\"reason\":\"placeholder\"}'\n",
+        false,
+    )?;
+    create_parented_file(
+        Path::new(".claude/settings.json"),
+        "{\n  \"hooks\": {\n    \"preToolUse\": [\".agentsec/hooks/agentsec-policy.sh\"]\n  }\n}\n",
+        false,
+    )?;
+    create_parented_file(
+        Path::new(".codex/config.toml"),
+        "[hooks]\npre_tool_use = [\".agentsec/hooks/agentsec-policy.sh\"]\n",
+        false,
+    )?;
+
+    let copilot_json = serde_json::to_string_pretty(&json!({
+        "hooks": {
+            "preToolUse": [".agentsec/hooks/agentsec-policy.sh"]
+        }
+    }))?;
+    create_parented_file(
+        Path::new(".github/hooks/agentsec-policy.json"),
+        &(copilot_json + "\n"),
+        false,
+    )?;
+
+    let report_path = Path::new("AI_AGENT_POLICY.md");
+    let doctor = analyze(&policy);
+    let report = render_markdown_report(&policy, &doctor);
+    create_parented_file(report_path, &report, true)?;
+
+    println!("Generated baseline policy and hook/config files.");
+    Ok(())
+}
+
+fn create_parented_file(path: &Path, content: &str, overwrite: bool) -> Result<(), AppError> {
+    if path.exists() && !overwrite {
+        println!(
+            "File `{}` already exists, skipping generation.",
+            path.display()
+        );
+        return Ok(());
+    }
+    let parent = path
+        .parent()
+        .ok_or_else(|| AppError::MissingParent(path.to_path_buf()))?;
+    fs::create_dir_all(parent).map_err(|source| AppError::WriteFile {
+        path: parent.display().to_string(),
+        source,
+    })?;
+    fs::write(path, content).map_err(|source| AppError::WriteFile {
+        path: path.display().to_string(),
+        source,
+    })?;
+    Ok(())
+}

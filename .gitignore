@@ -1,1 +1,11 @@
 /docs
+/.agentsec/
+/.codex/config.toml
+/.claude/settings.json
+/.github/hooks
+AI_AGENT_POLICY.md
+
+
+# Added by cargo
+
+/target
