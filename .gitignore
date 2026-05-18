@@ -1,5 +1,7 @@
 /docs/*
 !/docs/how-it-works.md
+!/docs/assets/
+!/docs/assets/**
 /.agentsec/
 /.codex/config.toml
 /.claude/settings.json

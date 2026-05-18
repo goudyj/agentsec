@@ -116,3 +116,9 @@ If no binary is found, wrappers return a safe review-style fallback response.
 - Policy enforcement depends on each tool's supported hook events.
 - If you update hook config files, restart your agent session so hooks are reloaded.
 - For architecture and event flow details, see [`docs/how-it-works.md`](docs/how-it-works.md).
+
+## Example
+
+![Denied .env read](docs/assets/env_denied.png)
+
+![Blocked file deletion](docs/assets/delete_file.png)
