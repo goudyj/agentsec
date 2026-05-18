@@ -37,4 +37,8 @@ pub enum Commands {
         #[arg(long, default_value = "AI_AGENT_POLICY.md")]
         output: PathBuf,
     },
+    HookEval {
+        #[arg(long, default_value = ".agentsec/policy.yaml")]
+        policy: PathBuf,
+    },
 }

@@ -32,4 +32,6 @@ pub enum AppError {
     MissingParent(PathBuf),
     #[error("serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
+    #[error("failed to read hook input from stdin: {0}")]
+    ReadStdin(std::io::Error),
 }

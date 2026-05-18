@@ -80,7 +80,7 @@ pub fn analyze(policy: &Policy) -> DoctorResult {
         findings.push(Finding {
             severity: Severity::High,
             title: "No `shell.deny` commands configured".to_string(),
-            remediation: "Block obviously destructive commands (terraform destroy, rm -rf /)."
+            remediation: "Block obviously destructive commands (terraform destroy, rm -rf)."
                 .to_string(),
         });
     }

@@ -16,6 +16,16 @@ pub fn run_generate(policy_path: &Path, profile: Option<&str>) -> Result<(), App
     } else {
         ".agentsec/hooks/agentsec-policy.sh"
     };
+    let claude_hook_command = if cfg!(windows) {
+        "powershell -NoProfile -ExecutionPolicy Bypass -File .agentsec/hooks/agentsec-policy.ps1"
+    } else {
+        "sh .agentsec/hooks/agentsec-policy.sh"
+    };
+    let codex_hook_command = if cfg!(windows) {
+        "powershell -NoProfile -ExecutionPolicy Bypass -File .agentsec/hooks/agentsec-policy.ps1"
+    } else {
+        "sh .agentsec/hooks/agentsec-policy.sh"
+    };
 
     create_parented_file(
         Path::new(".agentsec/hooks/README.md"),
@@ -25,26 +35,28 @@ pub fn run_generate(policy_path: &Path, profile: Option<&str>) -> Result<(), App
     if cfg!(windows) {
         create_parented_file(
             Path::new(hook_script_path),
-            "# Minimal placeholder hook decision script.\nWrite-Output '{\"decision\":\"allow\",\"reason\":\"placeholder\"}'\n",
+            "$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path\n$repoRoot = Resolve-Path (Join-Path $scriptDir \"..\\..\")\n$policyPath = Join-Path $repoRoot \".agentsec\\policy.yaml\"\n\n$agentsec = Get-Command agentsec -ErrorAction SilentlyContinue\nif ($agentsec) {\n  & $agentsec.Source hook-eval --policy $policyPath\n  exit $LASTEXITCODE\n}\n\n$releaseBin = Join-Path $repoRoot \"target\\release\\agentsec.exe\"\nif (Test-Path $releaseBin) {\n  & $releaseBin hook-eval --policy $policyPath\n  exit $LASTEXITCODE\n}\n\n$debugBin = Join-Path $repoRoot \"target\\debug\\agentsec.exe\"\nif (Test-Path $debugBin) {\n  & $debugBin hook-eval --policy $policyPath\n  exit $LASTEXITCODE\n}\n\nWrite-Output '{\"decision\":\"review\",\"reason\":\"agentsec binary not found\"}'\n",
             false,
         )?;
     } else {
         create_parented_file(
             Path::new(hook_script_path),
-            "#!/usr/bin/env sh\n# Minimal placeholder hook decision script.\necho '{\"decision\":\"allow\",\"reason\":\"placeholder\"}'\n",
+            "#!/usr/bin/env sh\nset -u\n\nSCRIPT_DIR=$(CDPATH= cd -- \"$(dirname -- \"$0\")\" && pwd)\nREPO_ROOT=$(CDPATH= cd -- \"$SCRIPT_DIR/../..\" && pwd)\nPOLICY_PATH=\"$REPO_ROOT/.agentsec/policy.yaml\"\n\nif command -v agentsec >/dev/null 2>&1; then\n  exec agentsec hook-eval --policy \"$POLICY_PATH\"\nfi\n\nif [ -x \"$REPO_ROOT/target/release/agentsec\" ]; then\n  exec \"$REPO_ROOT/target/release/agentsec\" hook-eval --policy \"$POLICY_PATH\"\nfi\n\nif [ -x \"$REPO_ROOT/target/debug/agentsec\" ]; then\n  exec \"$REPO_ROOT/target/debug/agentsec\" hook-eval --policy \"$POLICY_PATH\"\nfi\n\necho '{\"decision\":\"review\",\"reason\":\"agentsec binary not found\"}'\n",
             false,
         )?;
     }
     create_parented_file(
         Path::new(".claude/settings.json"),
         &format!(
-            "{{\n  \"hooks\": {{\n    \"preToolUse\": [\"{hook_script_path}\"]\n  }}\n}}\n"
+            "{{\n  \"hooks\": {{\n    \"PreToolUse\": [\n      {{\n        \"matcher\": \"*\",\n        \"hooks\": [\n          {{\n            \"type\": \"command\",\n            \"command\": \"{claude_hook_command}\"\n          }}\n        ]\n      }}\n    ],\n    \"PermissionRequest\": [\n      {{\n        \"matcher\": \"*\",\n        \"hooks\": [\n          {{\n            \"type\": \"command\",\n            \"command\": \"{claude_hook_command}\"\n          }}\n        ]\n      }}\n    ]\n  }}\n}}\n"
         ),
         false,
     )?;
     create_parented_file(
         Path::new(".codex/config.toml"),
-        &format!("[hooks]\npre_tool_use = [\"{hook_script_path}\"]\n"),
+        &format!(
+            "[features]\nhooks = true\n\n[[hooks.PreToolUse]]\nmatcher = \".*\"\n\n[[hooks.PreToolUse.hooks]]\ntype = \"command\"\ncommand = '{codex_hook_command}'\ntimeout = 30\nstatusMessage = \"AgentSec policy check\"\n\n[[hooks.PermissionRequest]]\nmatcher = \".*\"\n\n[[hooks.PermissionRequest.hooks]]\ntype = \"command\"\ncommand = '{codex_hook_command}'\ntimeout = 30\nstatusMessage = \"AgentSec approval check\"\n"
+        ),
         false,
     )?;
 

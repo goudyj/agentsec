@@ -1,4 +1,5 @@
-/docs
+/docs/*
+!/docs/how-it-works.md
 /.agentsec/
 /.codex/config.toml
 /.claude/settings.json
