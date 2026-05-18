@@ -117,7 +117,7 @@ If no binary is found, wrappers return a safe review-style fallback response.
 - If you update hook config files, restart your agent session so hooks are reloaded.
 - For architecture and event flow details, see [`docs/how-it-works.md`](docs/how-it-works.md).
 
-## Example
+## Examples
 
 ![Denied .env read](docs/assets/env_denied.png)
 
