@@ -11,6 +11,9 @@ It focuses on three workflows:
 
 AgentSec manages a repo-local policy file (`.agentsec/policy.yaml`) and evaluates risky actions through hooks.
 
+`.agentsec/policy.yaml` is the main configuration file you edit to define your security rules.
+If it does not exist yet, `agentsec generate` creates a default one for you.
+
 Current policy concepts:
 - `files.deny_read`
 - `files.deny_write`
@@ -58,6 +61,19 @@ cargo run -- doctor --fail-on high
 ```bash
 cargo run -- report
 ```
+
+## Using the example policy
+
+This repository includes a versioned example policy file: `policy.yaml.example`.
+
+Use it as a starting point:
+
+```bash
+mkdir -p .agentsec
+cp policy.yaml.example .agentsec/policy.yaml
+```
+
+You can then customize `.agentsec/policy.yaml` to fit your repository.
 
 ## CLI Reference
 

@@ -1,0 +1,41 @@
+profile: team-backend
+rules:
+  files:
+    deny_read:
+      - .env
+      - .env.*
+      - .aws/credentials
+      - '**/*.pem'
+    deny_write: []
+    require_human_review:
+      - auth/**
+      - payments/**
+  shell:
+    deny:
+      - rm -rf
+      - rm -f
+      - git push --force
+      - git push -f
+      - git reset --hard
+      - git clean -fd
+      - DROP TABLE
+      - drop table
+      - DROP DATABASE
+      - drop database
+      - TRUNCATE
+      - truncate
+      - kubectl apply
+      - kubectl delete
+      - terraform apply
+      - terraform destroy
+      - cdk deploy
+      - cdk destroy
+    require_human_review:
+      - ssh
+      - scp
+      - rsync
+      - ngrok
+      - curl
+  mcp:
+    rules:
+      - scan-only
